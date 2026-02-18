@@ -83,7 +83,7 @@ class Bot(ChessBotBase.Bot):
     def evaluate(self, board):
         # Terminal states
         if board.is_checkmate():
-            return -1e6 if board.turn == self.color else 1e6
+            return -1e6 if board.turn != self.color else 1e6
         if board.is_stalemate() or board.is_insufficient_material():
             return 0
 

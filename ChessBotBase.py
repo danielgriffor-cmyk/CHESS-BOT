@@ -15,26 +15,26 @@ class Bot:
         """
         raise NotImplementedError
 
+    def main_eval(self, board):
+        score = self.evaluate(board)
+        if board.turn != self.color:
+            return -score
+        return score
+
     def all_moves(self, board):
-        """
-        Return a list of (move, is_nudge) that are safe for the current player.
-        Uses an imaginary board for each move to check king safety.
-        """
         moves = []
+        my_color = board.turn
 
-        turn_color = board.turn
-        king_square = board.king(turn_color)
-
-        # --- normal legal moves ---
         for move in board.legal_moves:
-            temp_board = board.copy()
-            temp_board.push(move)
-            # check if our king is still safe
-            if not temp_board.is_check():
+            board.push(move)
+
+            # Is my king attacked after the move?
+            if not board.is_attacked_by(not my_color, board.king(my_color)):
                 moves.append((move, False))
 
-        return moves
+            board.pop()
 
+        return moves
 
     def minimax(self, board, depth=None, alpha=-1e9, beta=1e9, maximizing=None):
         if depth is None:
@@ -42,52 +42,97 @@ class Bot:
         if maximizing is None:
             maximizing = board.turn == self.color
 
-        if depth == 0 or board.is_game_over():
-            return self.evaluate(board) + 0.01*random.random(), None
+        # Terminal node
+        if depth == 0:
+            return self.quiescence(board, alpha, beta), None
+
+        if board.is_game_over():
+            return self.main_eval(board), None
 
         best_move = None
         moves = self.all_moves(board)
 
+        if not moves:
+            return self.main_eval(board), None
+
+        # -------- MOVE ORDERING --------
+        # Captures first → massive pruning improvement
+        moves.sort(
+            key=lambda m: board.is_capture(m[0]),
+            reverse=maximizing
+        )
+
         if maximizing:
-            max_eval = -1e9
+            value = -1e9
             for move, is_nudge in moves:
                 board.push(move)
-                eval_score, _ = self.minimax(board, depth-1, alpha, beta, False)
+                score, _ = self.minimax(board, depth - 1, alpha, beta, False)
                 board.pop()
-                if eval_score > max_eval:
-                    max_eval = eval_score
+
+                if score > value:
+                    value = score
                     best_move = (move, is_nudge)
-                alpha = max(alpha, eval_score)
-                if beta <= alpha:
-                    break
-            return max_eval, best_move
+
+                alpha = max(alpha, value)
+                if alpha >= beta:
+                    break  # beta cutoff
+
+            return value, best_move
 
         else:
-            min_eval = 1e9
+            value = 1e9
             for move, is_nudge in moves:
                 board.push(move)
-                eval_score, _ = self.minimax(board, depth-1, alpha, beta, True)
+                score, _ = self.minimax(board, depth - 1, alpha, beta, True)
                 board.pop()
-                if eval_score < min_eval:
-                    min_eval = eval_score
+
+                if score < value:
+                    value = score
                     best_move = (move, is_nudge)
-                beta = min(beta, eval_score)
+
+                beta = min(beta, value)
                 if beta <= alpha:
-                    break
-            return min_eval, best_move
+                    break  # alpha cutoff
+
+            return value, best_move
+
+    def quiescence(self, board, alpha, beta):
+        stand_pat = self.main_eval(board)
+
+        if stand_pat >= beta:
+            return beta
+        if alpha < stand_pat:
+            alpha = stand_pat
+
+        for move in board.legal_moves:
+            if not board.is_capture(move) and not board.gives_check(move):
+                continue
+
+            board.push(move)
+            score = -self.quiescence(board, -beta, -alpha)
+            board.pop()
+
+            if score >= beta:
+                return beta
+            if score > alpha:
+                alpha = score
+
+        return alpha
 
     def choose_move(self, board, depth=None):
-        """
-        Chooses the best move using minimax with alpha-beta pruning.
-        Returns (move, is_nudge). Falls back to first legal move if none found.
-        The score is automatically negated if the bot is black.
-        """
+        # --- Mate in 1 override ---
+        for move in board.legal_moves:
+            board.push(move)
+            if board.is_checkmate():
+                board.pop()
+                return move, False
+            board.pop()
+
+        # --- normal minimax ---
         if depth is None:
             depth = self.depth
 
-        # Maximizing if it's the bot's turn
         maximizing = board.turn == self.color
-
         score, best = self.minimax(board, depth, -1e9, 1e9, maximizing)
 
         if best is None:
@@ -97,3 +142,4 @@ class Bot:
             return None, False
 
         return best
+

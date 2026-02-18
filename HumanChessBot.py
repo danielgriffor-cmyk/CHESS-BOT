@@ -7,8 +7,7 @@ class Bot(ChessBotBase.Bot):
     def evaluate(self, board):
         
         if board.is_checkmate():
-            # Faster mate is better, slower mate is worse
-            return 1e9
+            return -1e6 if board.turn == self.color else 1e6
         
         score = 0
         pawn_val, knight_val, bishop_val, rook_val, queen_val = 10, 30, 35, 55, 100
@@ -107,8 +106,12 @@ class Bot(ChessBotBase.Bot):
 
         score = (material_score + defended_score - attacked_score + attacker_score) - (total_pieces * middlegame_bonus)
 
+        for sq in piece_pos:
+            if len(board.attackers(not self.color, sq)) > len(board.attackers(self.color, sq)):
+                score -= 100
+
         if board.is_stalemate() or board.is_insufficient_material():
             return -score
-        
+
         return score
 
