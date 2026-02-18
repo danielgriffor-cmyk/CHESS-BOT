@@ -17,13 +17,11 @@ UNICODE_PIECES = {
     "p": "♟", "n": "♞", "b": "♝", "r": "♜", "q": "♛", "k": "♚",
 }
 
-# ---------------- BOT ---------------- #
-
-
 # ---------------- GUI ---------------- #
 
 class chessGUI:
     def __init__(self, white_player='human', black_player=None):
+        self.move_time = 100
         self.board = chess.Board()
         self.white_player = white_player
         self.black_player = black_player
@@ -53,7 +51,7 @@ class chessGUI:
         self.draw()
 
         # Start bot move immediately if it's bot vs bot and Black is first
-        self.root.after(100, self.bot_turn)
+        self.root.after(self.move_time, self.bot_turn)
 
     def load_images(self):
         piece_map = {
@@ -125,19 +123,6 @@ class chessGUI:
             if m.from_square == square:
                 self.legal_targets.append(m.to_square)
 
-        # nudges (cannot capture, cannot move into check)
-        file = chess.square_file(square)
-        rank = chess.square_rank(square)
-        for df, dr in [(1,0), (-1,0), (0,1), (0,-1)]:
-            nf, nr = file + df, rank + dr
-            if 0 <= nf < 8 and 0 <= nr < 8:
-                t = chess.square(nf, nr)
-                if self.board.piece_at(t) is None:
-                    self.board.push(chess.Move(square, t))
-                    if not self.board.is_check():
-                        self.nudge_targets.append(t)
-                    self.board.pop()
-
     def update_status(self):
         if self.board.is_checkmate():
             winner = "Black" if self.board.turn == chess.WHITE else "White"
@@ -203,20 +188,22 @@ class chessGUI:
         # if bot vs bot, schedule next bot move
         next_player = self.white_player if self.board.turn == chess.WHITE else self.black_player
         if next_player != 'human' and not self.board.is_game_over():
-            self.root.after(300, self.bot_turn)
+            self.root.after(self.move_time, self.bot_turn)
 
     def after_player_move(self):
         if self.update_status():
             return
-        self.root.after(300, self.bot_turn)
+        self.root.after(self.move_time, self.bot_turn)
 
     # ---------------- Existing run method ----------------
     def run(self):
         self.root.mainloop()
 
-white_bot = HumanChessBot.Bot(chess.WHITE, depth=2)
+white_bot = HumanChessBot.Bot(chess.BLACK, depth=2)
 black_bot = SimpleChessBot.Bot(chess.BLACK, depth=2)
+
 gui = chessGUI(white_player=white_bot, black_player=black_bot)
+gui.move_time = 100
 gui.run()
 
 print(chess.pgn.Game.from_board(gui.board))
