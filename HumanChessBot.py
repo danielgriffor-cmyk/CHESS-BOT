@@ -11,15 +11,18 @@ class Bot(ChessBotBase.Bot):
         
         score = 0
         pawn_val, knight_val, bishop_val, rook_val, queen_val = 10, 30, 35, 55, 100
-        defend_mod = 0.05
-        attacked_mod = 0.05
-        attack_mod = -0.03
+        
+        defend_mod = 0.005
+        attacked_mod = 0.005
+        attack_mod = 0.003
+
+        distance_from_center_mod = 0.2
 
         total_pieces = chess.popcount(board.occupied)
 
-        endgame_bonus = 1 + max(total_pieces / 16 - 1, 0)
         beginning_bonus = 2 - min(total_pieces / 16, 1)
         middlegame_bonus = 2 - min(2 * abs(total_pieces / 16 - 1), 1)
+        endgame_bonus = 1 + max(total_pieces / 16 - 1, 0)
         
         # ---------------- MATERIAL -----------------
         my_material = (
@@ -102,16 +105,23 @@ class Bot(ChessBotBase.Bot):
         for target_square in queen_squares:
             attacker_score += len(board.attackers(not self.color, target_square)) * queen_val * attack_mod
 
-        material_score = (my_material - opponent_material) * endgame_bonus * beginning_bonus
+        # -------------- CENTRAL CONTROL ------------------
 
-        score = (material_score + defended_score - attacked_score + attacker_score) - (total_pieces * middlegame_bonus)
+        distance_score = 0
 
-        for sq in piece_pos:
-            if len(board.attackers(not self.color, sq)) > len(board.attackers(self.color, sq)):
-                score -= 100
+        for pos in piece_pos:
+            dist = chess.square_distance(pos, 36)
+            dist += chess.square_distance(pos, 37)
+            dist += chess.square_distance(pos, 44)
+            dist += chess.square_distance(pos, 45)
+            distance_score -= dist * distance_from_center_mod
+
+        material_score = (my_material - opponent_material) / middlegame_bonus
+
+        score = (material_score + defended_score - attacked_score + attacker_score) - (total_pieces * middlegame_bonus) + (distance_score * beginning_bonus)
 
         if board.is_stalemate() or board.is_insufficient_material():
-            return -score
+            return -score / 8
 
         return score
 
