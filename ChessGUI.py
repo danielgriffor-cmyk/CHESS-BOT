@@ -100,6 +100,10 @@ class chessGUI:
             if m.from_square == square:
                 self.legal_targets.append(m.to_square)
 
+    def set_board(self, fen):
+        self.board.set_fen(fen)
+        
+
     def update_status(self):
         if self.board.is_checkmate():
             winner = "Black" if self.board.turn == chess.WHITE else "White"

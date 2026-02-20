@@ -1,5 +1,6 @@
 import tkinter as tk
 import chess
+import chess.polyglot
 import random
 import math
 
@@ -8,12 +9,19 @@ class Bot:
         self.color = color
         self.depth = depth
         self.qsearch = qsearch
+        self.transposition_table = {}
+        self.past_moves_hash = {}
 
     def evaluate(self, board):
         raise NotImplementedError
 
     def main_eval(self, board):
-        score = self.evaluate(board)
+        h = chess.polyglot.zobrist_hash(board)
+        if h in self.transposition_table:
+            return self.transposition_table[h] + random.random() / 1000
+        else:
+            score = self.evaluate(board)
+            self.transposition_table[h] = score
         return score + random.random() / 1000
 
     def all_moves(self, board):
@@ -119,6 +127,11 @@ class Bot:
         return alpha
 
     def choose_move(self, board, depth=None):
+        h = chess.polyglot.zobrist_hash(board)
+
+        if h in self.past_moves_hash:
+            return self.past_moves_hash[h]
+
         # --- Mate in 1 override ---
         for move in board.legal_moves:
             board.push(move)
@@ -139,6 +152,7 @@ class Bot:
             if legal_moves:
                 return legal_moves[0], False
             return None, False
-
+        
+        self.past_moves_hash[h] = best
         return best
 
