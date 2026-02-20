@@ -17,8 +17,11 @@ class Bot(ChessBotBase.Bot):
         attack_mod = 0.003
 
         distance_from_center_mod = 0.2
+        opp_king_dist_mod = 1
 
-        king_walk_mod = 10
+        distance_of_kings_mod = 0.6
+
+        king_walk_mod = 1
 
         total_pieces = chess.popcount(board.occupied)
 
@@ -127,11 +130,26 @@ class Bot(ChessBotBase.Bot):
         else:
             king_walk_score += 8 - chess.square_rank(king_squares[0])
 
+        # ----------------- CHECKMATING --------------------
+
+        opp_king_dist = chess.square_distance(opp_king_squares[0], 36)
+        opp_king_dist += chess.square_distance(opp_king_squares[0], 37)
+        opp_king_dist += chess.square_distance(opp_king_squares[0], 44)
+        opp_king_dist += chess.square_distance(opp_king_squares[0], 45)
+
+        king_dists = chess.square_distance(opp_king_squares[0], king_squares[0])
+
+        opp_king_score = opp_king_dist * opp_king_dist_mod * (endgame_bonus - 1.7)
+        
+        king_dists_score = king_dists * distance_of_kings_mod * (endgame_bonus - 1.7)
+
         king_walk_score *= king_walk_mod * ((endgame_bonus ** 2) - (beginning_bonus ** 2) - 0.5)
 
         material_score = (my_material - opponent_material) / middlegame_bonus
 
         score = (material_score + defended_score - attacked_score + attacker_score) - (total_pieces * middlegame_bonus) + (distance_score * beginning_bonus)
+
+        score += opp_king_score - king_dists_score
 
         if board.is_stalemate() or board.is_insufficient_material():
             return -score / 8
