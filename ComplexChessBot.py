@@ -21,7 +21,11 @@ class Bot(ChessBotBase.Bot):
 
         distance_of_kings_mod = 0.6
 
+        pawn_distance_mod = 0.6
+
         king_walk_mod = 1
+
+        coverage_mod = 0.1
 
         total_pieces = chess.popcount(board.occupied)
 
@@ -119,7 +123,7 @@ class Bot(ChessBotBase.Bot):
             dist += chess.square_distance(pos, 37)
             dist += chess.square_distance(pos, 44)
             dist += chess.square_distance(pos, 45)
-            distance_score -= dist * distance_from_center_mod
+            distance_score += dist * distance_from_center_mod * beginning_bonus * middlegame_bonus
 
         # ------------------ KING WALKING -------------------
 
@@ -139,19 +143,45 @@ class Bot(ChessBotBase.Bot):
 
         king_dists = chess.square_distance(opp_king_squares[0], king_squares[0])
 
+        # ---------------- PAWN STRUCTURE ------------------
+
+        pawn_distance = 0
+
+        for pawn in pawn_squares:
+            if self.color == chess.WHITE:
+                pawn_distance += chess.square_rank(pawn)
+            else:
+                pawn_distance += 8 - chess.square_rank(pawn)
+
+        # ------------------ MOVEMENT ---------------------
+
+        attack_map = []
+        for sq in board.piece_map():
+            piece = board.piece_at(sq)
+            if piece.color == self.color:
+                attacks = [att for att in board.attacks(sq)]
+                if not attacks in attack_map:
+                    attack_map.append(attacks)
+
+        coverage_score = len(attack_map) * middlegame_bonus * beginning_bonus * coverage_mod
+
+        pawn_distance_score = pawn_distance * pawn_distance_mod * beginning_bonus
+
         opp_king_score = opp_king_dist * opp_king_dist_mod * (endgame_bonus - 1.7)
         
         king_dists_score = king_dists * distance_of_kings_mod * (endgame_bonus - 1.7)
 
-        king_walk_score *= king_walk_mod * ((endgame_bonus ** 2) - (beginning_bonus ** 2) - 0.5)
+        king_walk_score *= king_walk_mod * ((endgame_bonus ** 2) - (beginning_bonus ** 2) - 1)
 
         material_score = (my_material - opponent_material) / middlegame_bonus
 
-        score = (material_score + defended_score - attacked_score + attacker_score) - (total_pieces * middlegame_bonus) + (distance_score * beginning_bonus)
+        score = (material_score + defended_score - attacked_score + attacker_score)
+        
+        score -= (total_pieces * (middlegame_bonus - 1)) + distance_score
 
-        score += opp_king_score - king_dists_score
+        score += opp_king_score - king_dists_score + coverage_score
 
-        if board.is_stalemate() or board.is_insufficient_material():
+        if board.is_stalemate() or board.is_insufficient_material() or board.is_repetition():
             return -score / 8
 
         return score
