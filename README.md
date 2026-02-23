@@ -23,9 +23,11 @@ To make a chess bot, you must create your own class. This class should extend th
 ```python
 from ChessBotBase import Bot
 
-class MyChessBot(Bot):
+class Bot(Bot):
   ...
 ```
+The class must be named Bot.
+
 When running this bot, you get a `NotImplementedError`. This is because there is no evaluation logic.
 
 To write evaluation logic, overwrite the `evaluate` function.

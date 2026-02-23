@@ -32,13 +32,7 @@ class Bot:
         my_color = board.turn
 
         for move in board.legal_moves:
-            board.push(move)
-
-            # Is my king attacked after the move?
-            if not board.is_attacked_by(not my_color, board.king(my_color)):
-                moves.append((move, False))
-
-            board.pop()
+            moves.append((move, False))
 
         return moves
 

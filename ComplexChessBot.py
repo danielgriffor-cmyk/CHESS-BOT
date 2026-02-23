@@ -102,20 +102,20 @@ class Bot(ChessBotBase.Bot):
 
         attacker_score = 0
 
-        for target_square in pawn_squares:
-            attacker_score += len(board.attackers(not self.color, target_square)) * pawn_val * attack_mod
+        for target_square in opp_pawn_squares:
+            attacker_score += len(board.attackers(self.color, target_square)) * pawn_val * attack_mod
 
-        for target_square in knight_squares:
-            attacker_score += len(board.attackers(not self.color, target_square)) * knight_val * attack_mod
+        for target_square in opp_knight_squares:
+            attacker_score += len(board.attackers(self.color, target_square)) * knight_val * attack_mod
 
-        for target_square in bishop_squares:
-            attacker_score += len(board.attackers(not self.color, target_square)) * bishop_val * attack_mod
+        for target_square in opp_bishop_squares:
+            attacker_score += len(board.attackers(self.color, target_square)) * bishop_val * attack_mod
 
-        for target_square in rook_squares:
-            attacker_score += len(board.attackers(not self.color, target_square)) * rook_val * attack_mod
+        for target_square in opp_rook_squares:
+            attacker_score += len(board.attackers(self.color, target_square)) * rook_val * attack_mod
 
-        for target_square in queen_squares:
-            attacker_score += len(board.attackers(not self.color, target_square)) * queen_val * attack_mod
+        for target_square in opp_queen_squares:
+            attacker_score += len(board.attackers(self.color, target_square)) * queen_val * attack_mod
 
         # -------------- CENTRAL CONTROL ------------------
 
@@ -127,6 +127,8 @@ class Bot(ChessBotBase.Bot):
             dist += chess.square_distance(pos, 44)
             dist += chess.square_distance(pos, 45)
             distance_score += dist * distance_from_center_mod * beginning_bonus * middlegame_bonus
+
+        distance_score = 40 - distance_score
 
         # ------------------ KING WALKING -------------------
 
@@ -158,21 +160,19 @@ class Bot(ChessBotBase.Bot):
 
         # ------------------ MOVEMENT ---------------------
 
-        attack_map = []
-        for sq in board.piece_map():
-            piece = board.piece_at(sq)
-            if piece.color == self.color:
-                attacks = [att for att in board.attacks(sq)]
-                if not attacks in attack_map:
-                    attack_map.append(attacks)
+        attack_squares = set()
 
-        coverage_score = len(attack_map) * middlegame_bonus * beginning_bonus * coverage_mod
+        for sq, piece in board.piece_map().items():
+            if piece.color == self.color:
+                attack_squares |= set(board.attacks(sq))
+
+        coverage_score = len(attack_squares) * coverage_mod * middlegame_bonus * beginning_bonus
 
         pawn_distance_score = pawn_distance * pawn_distance_mod * beginning_bonus
 
-        opp_king_score = opp_king_dist * opp_king_dist_mod * (endgame_bonus - 1.7)
+        opp_king_score = opp_king_dist * opp_king_dist_mod * max(0, endgame_bonus - 1.7)
         
-        king_dists_score = king_dists * distance_of_kings_mod * (endgame_bonus - 1.7)
+        king_dists_score = king_dists * distance_of_kings_mod * max(0, endgame_bonus - 1.7)
 
         king_walk_score *= king_walk_mod * ((endgame_bonus ** 2) - (beginning_bonus ** 2) - 1)
 
@@ -180,11 +180,11 @@ class Bot(ChessBotBase.Bot):
 
         score = (material_score + defended_score - attacked_score + attacker_score)
         
-        score -= (total_pieces * (middlegame_bonus - 1)) + distance_score
+        score += (total_pieces * (middlegame_bonus - 1)) + distance_score
 
         score += opp_king_score - king_dists_score + coverage_score
 
-        if board.is_stalemate() or board.is_insufficient_material() or board.is_repetition():
+        if board.is_stalemate() or board.is_insufficient_material():
             return -score / 8
 
         return score

@@ -10,11 +10,11 @@ import CheckChessBot
 
 Human = "human"
 
+white_bot = ComplexChessBot.Bot(color = chess.WHITE, depth=3, qsearch=False)
 black_bot = ComplexChessBot.Bot(color = chess.BLACK, depth=3, qsearch=False)
-white_bot = Human
 
 gui = chessGUI(white_player=white_bot, black_player=black_bot)
-gui.move_time = 100
+gui.move_time = 1000
 
 gui.run()
 
