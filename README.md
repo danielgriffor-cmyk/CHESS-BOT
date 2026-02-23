@@ -34,9 +34,9 @@ To write evaluation logic, overwrite the `evaluate` function.
 
 for example,
 ```python
-from ChessBoardBase import Bot
+from base.ChessBoardBase import Bot
 
-class StalemateChessBot(Bot):
+class Bot(Bot):
   def evaluate(self, board):
     if board.is_stalemate():
       return 100
@@ -45,3 +45,21 @@ class StalemateChessBot(Bot):
 always plays for stalemate if it can see it, or else it plays the first legal move. 
 
 Chess bots also automatically play mate in one, but do not look for mate in more than one.
+
+
+Another thing that you need to add to your chess bot, is a name.
+
+A name is really easy to add to your bot. Using the stalemate bot as an example:
+
+```python
+from base.ChessBoardBase import Bot
+
+class Bot(Bot):
+  def name(self):
+    return "Stalemate Bot"
+
+  def evaluate(self, board):
+    if board.is_stalemate():
+      return 100
+    return 0
+```
