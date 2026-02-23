@@ -1,6 +1,6 @@
 import chess
 import random
-import ChessBotBase
+import base.ChessBotBase as ChessBotBase
 import math
 
 class Bot(ChessBotBase.Bot):

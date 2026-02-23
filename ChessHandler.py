@@ -1,12 +1,10 @@
 import tkinter as tk
 import chess
 import chess.pgn
-from ChessGUI import chessGUI
+from base.ChessGUI import chessGUI
 
-import SimpleChessBot
-import ComplexChessBot
-import RandomChessBot
-import CheckChessBot
+import bots.ComplexChessBot as ComplexChessBot
+import bots.CheckChessBot as CheckChessBot
 
 Human = "human"
 
