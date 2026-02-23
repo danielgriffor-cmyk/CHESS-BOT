@@ -6,10 +6,11 @@ import math
 
 class Bot:
     def __init__(self, color=chess.BLACK, depth=2, qsearch=True, qdepth=4):
-        self.color = color
+        self.color = color if depth%2 == 0 else not color
         self.depth = depth
         self.qsearch = qsearch
         self.qdepth = qdepth
+        self.turn = 0
         self.transposition_table = {}
         self.past_moves_hash = {}
 
@@ -105,7 +106,7 @@ class Bot:
         stand_pat = self.perspective_search(board)
 
         if stand_pat >= beta:
-            return stand_pat
+            return beta
         if stand_pat > alpha:
             alpha = stand_pat
 
@@ -124,13 +125,15 @@ class Bot:
             board.pop()
 
             if score >= beta:
-                return score
+                return beta
             if score > alpha:
                 alpha = score
 
         return alpha
 
     def choose_move(self, board, depth=None):
+        self.turn += 1
+
         h = chess.polyglot.zobrist_hash(board)
 
         if h in self.past_moves_hash:

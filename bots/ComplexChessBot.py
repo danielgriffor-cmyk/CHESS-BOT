@@ -15,9 +15,9 @@ class Bot(ChessBotBase.Bot):
         score = 0
         pawn_val, knight_val, bishop_val, rook_val, queen_val = 10, 30, 35, 55, 100
         
-        defend_mod = 0.005
-        attacked_mod = 0.005
-        attack_mod = 0.003
+        defend_mod = 0.05
+        attacked_mod = 0.05
+        attack_mod = 0.03
 
         distance_from_center_mod = 0.2
         opp_king_dist_mod = 1
