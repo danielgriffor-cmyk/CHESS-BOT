@@ -7,6 +7,19 @@ class Bot(ChessBotBase.Bot):
     def name(self):
         return "Complex Chess Bot"
 
+    def choose_move(self, board):
+        if self.turn == 0:
+            self.turn += 1
+            if self.color == chess.WHITE:
+                move = chess.Move.from_uci("e2e4"), None
+            else:
+                move = chess.Move.from_uci("e7e5"), None
+            return move
+
+        move = super().choose_move(board)
+
+        return move
+
     def evaluate(self, board):
 
         if board.is_checkmate():
@@ -19,16 +32,16 @@ class Bot(ChessBotBase.Bot):
         attacked_mod = 0.015
         attack_mod = 0.01
 
-        distance_from_center_mod = 0.2
+        distance_from_center_mod = 0.5
         opp_king_dist_mod = 1
 
         distance_of_kings_mod = 0.6
 
-        pawn_distance_mod = 0.6
+        pawn_distance_mod = 2
 
         king_walk_mod = 1
 
-        coverage_mod = 0.1
+        coverage_mod = 0.4
 
         total_pieces = chess.popcount(board.occupied)
 

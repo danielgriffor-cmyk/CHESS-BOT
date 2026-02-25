@@ -1,6 +1,7 @@
 import tkinter as tk
 from PIL import Image, ImageDraw, ImageTk
 import chess
+import chess.pgn
 
 SQUARE_SIZE = 70
 LIGHT = "#f0d9b5"
@@ -65,6 +66,14 @@ class chessGUI:
         )
         self.black_eval.pack(side=tk.LEFT, padx=5)
 
+        # PGN display
+        self.pgn_label = tk.Label(self.root, text="PGN:", font=("Arial", 10))
+        self.pgn_label.pack()
+
+        # copy PGN button
+        self.copy_pgn_btn = tk.Button(self.root, text="Copy PGN", command=self.copy_pgn)
+        self.copy_pgn_btn.pack(pady=2)
+
         self.canvas.bind("<Button-1>", self.on_click)
         self.draw()
 
@@ -75,6 +84,22 @@ class chessGUI:
         """Update the evaluation display for both sides"""
         self.white_eval.config(text=f"White: {white_eval:+.1f}")
         self.black_eval.config(text=f"Black: {black_eval:+.1f}")
+
+    def copy_pgn(self):
+        """Copy the current game's PGN to the clipboard"""
+        try:
+            pgn = chess.pgn.Game.from_board(self.board)
+            pgn.headers["White"] = "Human" if self.white_player == "human" else self.white_player.name()
+            pgn.headers["Black"] = "Human" if self.black_player == "human" else self.black_player.name()
+            pgn_str = str(pgn)
+            self.root.clipboard_clear()
+            self.root.clipboard_append(pgn_str)
+            # brief status message
+            self.status.config(text="PGN copied to clipboard")
+            self.root.after(2000, lambda: self.status.config(text=""))
+        except Exception as e:
+            self.status.config(text=f"PGN copy failed: {e}")
+            self.root.after(3000, lambda: self.status.config(text=""))
 
     def load_images(self):
         piece_map = {
@@ -210,10 +235,12 @@ class chessGUI:
         if self.board.is_checkmate():
             winner = "Black" if self.board.turn == chess.WHITE else "White"
             self.status.config(text=f"Checkmate! {winner} wins.")
+            self.enable_postgame_buttons()
             return True
 
         if self.board.is_stalemate():
             self.status.config(text="Stalemate! Draw.")
+            self.enable_postgame_buttons()
             return True
 
         if self.board.is_check():
@@ -277,7 +304,6 @@ class chessGUI:
             self.root.after(self.move_time, self.bot_turn)
 
     def after_player_move(self):
-        self.update_evaluation(self.white_player.evaluate(self.board), self.black_player.evaluate(self.board))
         if self.update_status():
             return
         self.root.after(self.move_time, self.bot_turn)

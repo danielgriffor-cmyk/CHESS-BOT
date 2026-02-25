@@ -5,7 +5,7 @@ import random
 import math
 
 class Bot:
-    def __init__(self, color=chess.BLACK, depth=2, qsearch=True, qdepth=4):
+    def __init__(self, color=chess.BLACK, depth=2, qsearch=False, qdepth=4):
         self.color = color
         self.depth = depth
         self.qsearch = qsearch
