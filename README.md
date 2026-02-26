@@ -1,5 +1,7 @@
 Chess Handler is an open-source chess handler that lets users play against and create their own simple chess bots.
 
+Recent versions include basic multithreading for the AI engine – bot searches are executed in background threads and the GUI no longer freezes while the computer is thinking. Additionally the top‑level move search uses multiple cores when available, so higher depths finish faster.
+
 It isn't very optimized so be warned.
 
 This engine utilizes the `python-chess` library, which offers a variety of tools for efficient chess gaming.

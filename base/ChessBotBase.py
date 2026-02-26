@@ -3,6 +3,7 @@ import chess
 import chess.polyglot
 import random
 import math
+from concurrent.futures import ThreadPoolExecutor
 
 class Bot:
     def __init__(self, color=chess.BLACK, depth=2, qsearch=False, qdepth=4):
@@ -144,6 +145,37 @@ class Bot:
             depth = self.depth
 
         maximizing = board.turn == self.color
+
+        # if we're searching deeper than one ply, we can evaluate each first move
+        # in parallel to make use of multiple cores. the recursive minimax call
+        # uses its own board copy so no shared state is modified.
+        if depth > 1:
+            moves = self.all_moves(board)
+            best_score = -1e9 if maximizing else 1e9
+            best_move = None
+
+            def eval_move(move_tuple):
+                move, is_nudge = move_tuple
+                board_copy = board.copy()
+                board_copy.push(move)
+                score, _ = self.minimax(board_copy, depth - 1, -1e9, 1e9, not maximizing)
+                return score, move_tuple
+
+            with ThreadPoolExecutor() as executor:
+                for score, move_tuple in executor.map(eval_move, moves):
+                    if (maximizing and score > best_score) or (not maximizing and score < best_score):
+                        best_score = score
+                        best_move = move_tuple
+
+            if best_move is None:
+                legal_moves = list(board.legal_moves)
+                if legal_moves:
+                    return legal_moves[0], False
+                return None, False
+            self.past_moves_hash[h] = best_move
+            return best_move
+
+        # fall back to single-threaded minimax for shallow searches
         score, best = self.minimax(board, depth, -1e9, 1e9, maximizing)
 
         if best is None:

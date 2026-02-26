@@ -1,7 +1,10 @@
 import tkinter as tk
+from tkinter import simpledialog
 from PIL import Image, ImageDraw, ImageTk
 import chess
 import chess.pgn
+import math
+import threading
 
 SQUARE_SIZE = 70
 LIGHT = "#f0d9b5"
@@ -16,6 +19,9 @@ class chessGUI:
         self.board = chess.Board()
         self.white_player = white_player
         self.black_player = black_player
+
+        self.white_eval_bot = None
+        self.black_eval_bot = None
 
         self.root = tk.Tk()
         self.root.title("Chess")
@@ -66,10 +72,6 @@ class chessGUI:
         )
         self.black_eval.pack(side=tk.LEFT, padx=5)
 
-        # PGN display
-        self.pgn_label = tk.Label(self.root, text="PGN:", font=("Arial", 10))
-        self.pgn_label.pack()
-
         # copy PGN button
         self.copy_pgn_btn = tk.Button(self.root, text="Copy PGN", command=self.copy_pgn)
         self.copy_pgn_btn.pack(pady=2)
@@ -80,10 +82,25 @@ class chessGUI:
         # Start bot move immediately if it's bot vs bot and Black is first
         self.root.after(self.move_time, self.bot_turn)
 
+    def get_eval_bots(self, white_eval_bot, black_eval_bot):
+        self.white_eval_bot = white_eval_bot
+        self.black_eval_bot = black_eval_bot
+
     def update_evaluation(self, white_eval, black_eval):
         """Update the evaluation display for both sides"""
         self.white_eval.config(text=f"White: {white_eval:+.1f}")
         self.black_eval.config(text=f"Black: {black_eval:+.1f}")
+
+    def ask_promotion(self):
+        """Ask user for pawn promotion piece"""
+        choices = {'q': chess.QUEEN, 'r': chess.ROOK, 'b': chess.BISHOP, 'n': chess.KNIGHT}
+        while True:
+            resp = simpledialog.askstring("Promotion", "Promote pawn to (q,r,b,n):", parent=self.root)
+            if resp is None:
+                return chess.QUEEN
+            key = resp.lower().strip()
+            if key in choices:
+                return choices[key]
 
     def copy_pgn(self):
         """Copy the current game's PGN to the clipboard"""
@@ -156,7 +173,27 @@ class chessGUI:
         self.move_ring = ImageTk.PhotoImage(ring)
         
     def draw(self):
-        self.update_evaluation(self.white_player.evaluate(self.board), self.black_player.evaluate(self.board))
+        # refresh PGN text each redraw
+        pgn = chess.pgn.Game.from_board(self.board)
+
+        white_eval = 0
+        black_eval = 0
+        # evaluation bots take precedence; otherwise use the player bot if it's not human
+        if self.white_eval_bot is not None:
+            white_eval = self.white_eval_bot.evaluate(self.board)
+        elif self.white_player != "human":
+            white_eval = self.white_player.evaluate(self.board)
+        else:
+            white_eval = math.nan
+        
+        if self.black_eval_bot is not None:
+            black_eval = self.black_eval_bot.evaluate(self.board)
+        elif self.black_player != "human":
+            black_eval = self.black_player.evaluate(self.board)
+        else:
+            black_eval = math.nan
+
+        self.update_evaluation(white_eval, black_eval)
         self.canvas.delete("all")
         p = 0
         for r in range(8):
@@ -268,8 +305,15 @@ class chessGUI:
                 self.compute_targets(sq)
         else:
             if sq in self.legal_targets or sq in self.nudge_targets:
+                promotion = None
+                moving_piece = self.board.piece_at(self.selected)
+                # handle pawn promotion
+                if moving_piece and moving_piece.piece_type == chess.PAWN:
+                    rank = chess.square_rank(sq)
+                    if rank == 0 or rank == 7:
+                        promotion = self.ask_promotion()
                 self.prev_sq = [self.selected, sq]
-                self.board.push(chess.Move(self.selected, sq))
+                self.board.push(chess.Move(self.selected, sq, promotion=promotion))
                 self.after_player_move()
 
             self.selected = None
@@ -279,6 +323,7 @@ class chessGUI:
         self.draw()
 
     def bot_turn(self):
+        # kick off a bot move computation in a background thread so the UI stays responsive
         if self.board.is_game_over():
             return
 
@@ -286,8 +331,18 @@ class chessGUI:
         if current_player == 'human' or current_player is None:
             return
 
-        move, is_nudge = current_player.choose_move(self.board)
+        # copy board for thread safety; the original board may be modified by user events
+        board_copy = self.board.copy()
 
+        def compute_move():
+            move, is_nudge = current_player.choose_move(board_copy)
+            # schedule application of the move back on the main thread
+            self.root.after(0, lambda: self._apply_bot_move(move, is_nudge))
+
+        threading.Thread(target=compute_move, daemon=True).start()
+
+    def _apply_bot_move(self, move, is_nudge):
+        # this runs on the Tkinter main thread
         if move is not None:
             self.prev_sq.clear()
             curr_board = self.board.piece_map().copy()

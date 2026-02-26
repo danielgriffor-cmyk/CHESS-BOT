@@ -8,11 +8,11 @@ import bots.StalemateChessBot as StalemateChessBot
 
 Human = "human"
 
-black_bot = ComplexChessBot.Bot(color = chess.BLACK, depth=2, qsearch=True, qdepth=6)
-white_bot = ComplexChessBot.Bot(color = chess.WHITE, depth=3)
+black_bot = ComplexChessBot.Bot(color = chess.BLACK, depth=3)
+white_bot = "human"
 
 gui = chessGUI(white_player=white_bot, black_player=black_bot)
-gui.move_time = 1000
+gui.move_time = 10
 
 gui.run()
 
