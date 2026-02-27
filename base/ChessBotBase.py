@@ -22,6 +22,9 @@ class Bot:
     def evaluate(self, board):
         raise NotImplementedError
 
+    def openning(self, board):
+        raise NotImplementedError
+
     def main_eval(self, board):
         h = chess.polyglot.zobrist_hash(board)
         if h in self.transposition_table:
@@ -125,6 +128,14 @@ class Bot:
         return best_score
         
     def choose_move(self, board, depth=None):
+
+        move = None
+        move = self.openning(board)
+
+        if move != None:
+            if move in board.legal_moves:
+                return move, False
+
         self.turn += 1
 
         h = chess.polyglot.zobrist_hash(board)
